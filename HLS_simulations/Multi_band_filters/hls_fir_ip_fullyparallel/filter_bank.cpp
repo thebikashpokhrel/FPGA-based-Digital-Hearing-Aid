@@ -3,7 +3,8 @@
 // Configuration structures for each band
 // coeff_vec is declared as double because hls::FIR expects const double*
 
-struct config_band0 : hls::ip_fir::params_t {
+struct config_band0 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 163;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -20,7 +21,8 @@ struct config_band0 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band1 : hls::ip_fir::params_t {
+struct config_band1 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 163;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -37,7 +39,8 @@ struct config_band1 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band2 : hls::ip_fir::params_t {
+struct config_band2 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 147;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -54,7 +57,8 @@ struct config_band2 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band3 : hls::ip_fir::params_t {
+struct config_band3 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 75;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -71,7 +75,8 @@ struct config_band3 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band4 : hls::ip_fir::params_t {
+struct config_band4 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 75;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -88,7 +93,8 @@ struct config_band4 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band5 : hls::ip_fir::params_t {
+struct config_band5 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 75;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -105,7 +111,8 @@ struct config_band5 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band6 : hls::ip_fir::params_t {
+struct config_band6 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 39;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -122,7 +129,8 @@ struct config_band6 : hls::ip_fir::params_t {
         hls::ip_fir::convergent_rounding_to_even;
 };
 
-struct config_band7 : hls::ip_fir::params_t {
+struct config_band7 : hls::ip_fir::params_t
+{
     static const unsigned num_coeffs = 75;
     static const double coeff_vec[num_coeffs];
     static const unsigned input_width = 16;
@@ -175,25 +183,27 @@ const double config_band7::coeff_vec[config_band7::num_coeffs] = {
 
 // Top-level filter bank - uses data_t and fir_out_t streams
 void filter_bank(
-    hls::stream<data_t>& input_left,
-    hls::stream<data_t>& input_right,
-    hls::stream<data_t>& output_left,
-    hls::stream<data_t>& output_right,
-    int num_samples) {
+    hls::stream<data_t> &input_left,
+    hls::stream<data_t> &input_right,
+    hls::stream<data_t> &output_left,
+    hls::stream<data_t> &output_right,
+    int num_samples)
+{
 
-    #pragma HLS INTERFACE axis port = input_left
-    #pragma HLS INTERFACE axis port = input_right
-    #pragma HLS INTERFACE axis port = output_left
-    #pragma HLS INTERFACE axis port = output_right
-    #pragma HLS INTERFACE s_axilite port = num_samples bundle = control
-    #pragma HLS INTERFACE s_axilite port = return bundle = control
+#pragma HLS INTERFACE axis port = input_left
+#pragma HLS INTERFACE axis port = input_right
+#pragma HLS INTERFACE axis port = output_left
+#pragma HLS INTERFACE axis port = output_right
+#pragma HLS INTERFACE s_axilite port = num_samples bundle = control
+#pragma HLS INTERFACE s_axilite port = return bundle = control
 
-    const int BAND_TO_BOOST = 5;  // 5th band to apply gain
+    const int BAND_TO_BOOST = 5;      // 5th band to apply gain
     const double BOOST_LINEAR = 30.0; // Gain of 30
 
     // compile-time fixed-point gains per band
     ap_fixed<64, 6> band_gain[NUM_BANDS];
-    for (int b = 0; b < NUM_BANDS; ++b) {
+    for (int b = 0; b < NUM_BANDS; ++b)
+    {
         if (b == BAND_TO_BOOST)
             band_gain[b] = (ap_fixed<64, 6>)BOOST_LINEAR;
         else
@@ -207,26 +217,28 @@ void filter_bank(
     hls::stream<fir_out_t> band_out_right[NUM_BANDS];
 
     // Demux inputs to all bands
-    for (int i = 0; i < num_samples; i++) {
-    #pragma HLS PIPELINE II=1
+    for (int i = 0; i < num_samples; i++)
+    {
+#pragma HLS PIPELINE II = 1
         data_t l = input_left.read();
         data_t r = input_right.read();
-        for (int j = 0; j < NUM_BANDS; j++) {
-        #pragma HLS UNROLL
+        for (int j = 0; j < NUM_BANDS; j++)
+        {
+#pragma HLS UNROLL
             band_in_left[j].write(l);
             band_in_right[j].write(r);
         }
     }
 
     // FIR filter instances
-    static hls::FIR<config_band0> fir_left_0,  fir_right_0;
-    static hls::FIR<config_band1> fir_left_1,  fir_right_1;
-    static hls::FIR<config_band2> fir_left_2,  fir_right_2;
-    static hls::FIR<config_band3> fir_left_3,  fir_right_3;
-    static hls::FIR<config_band4> fir_left_4,  fir_right_4;
-    static hls::FIR<config_band5> fir_left_5,  fir_right_5;
-    static hls::FIR<config_band6> fir_left_6,  fir_right_6;
-    static hls::FIR<config_band7> fir_left_7,  fir_right_7;
+    static hls::FIR<config_band0> fir_left_0, fir_right_0;
+    static hls::FIR<config_band1> fir_left_1, fir_right_1;
+    static hls::FIR<config_band2> fir_left_2, fir_right_2;
+    static hls::FIR<config_band3> fir_left_3, fir_right_3;
+    static hls::FIR<config_band4> fir_left_4, fir_right_4;
+    static hls::FIR<config_band5> fir_left_5, fir_right_5;
+    static hls::FIR<config_band6> fir_left_6, fir_right_6;
+    static hls::FIR<config_band7> fir_left_7, fir_right_7;
 
     // Run FIRs
     fir_left_0.run(band_in_left[0], band_out_left[0]);
@@ -248,13 +260,15 @@ void filter_bank(
     fir_right_7.run(band_in_right[7], band_out_right[7]);
 
     // Sum all bands and write outputs
-    for (int i = 0; i < num_samples; i++) {
-    #pragma HLS PIPELINE II=1
+    for (int i = 0; i < num_samples; i++)
+    {
+#pragma HLS PIPELINE II = 1
         ap_fixed<64, 6> sum_l = 0;
         ap_fixed<64, 6> sum_r = 0;
 
-        for (int b = 0; b < NUM_BANDS; b++) {
-        #pragma HLS UNROLL
+        for (int b = 0; b < NUM_BANDS; b++)
+        {
+#pragma HLS UNROLL
             ap_fixed<64, 6> out_l = (ap_fixed<64, 6>)band_out_left[b].read();
             ap_fixed<64, 6> out_r = (ap_fixed<64, 6>)band_out_right[b].read();
 
@@ -267,10 +281,14 @@ void filter_bank(
         const ap_fixed<64, 6> max_val = (ap_fixed<64, 6>)0.99996;
         const ap_fixed<64, 6> min_val = (ap_fixed<64, 6>)-1.0;
 
-        if (sum_l > max_val) sum_l = max_val;
-        if (sum_l < min_val) sum_l = min_val;
-        if (sum_r > max_val) sum_r = max_val;
-        if (sum_r < min_val) sum_r = min_val;
+        if (sum_l > max_val)
+            sum_l = max_val;
+        if (sum_l < min_val)
+            sum_l = min_val;
+        if (sum_r > max_val)
+            sum_r = max_val;
+        if (sum_r < min_val)
+            sum_r = min_val;
 
         output_left.write((data_t)sum_l);
         output_right.write((data_t)sum_r);
