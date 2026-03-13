@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────
+#  HearSmart Speech Enhancement — Config
+# ─────────────────────────────────────────────
+
+audio:
+  sample_rate: 16000
+  duration: 1.0                  # seconds (your samples are 1s each)
+  n_samples: 16000               # sample_rate * duration
+
+stft:
+  n_fft: 512                     # FFT size  → 257 freq bins
+  hop_length: 128                # 50% overlap at 256, faster with 128
+  win_length: 512
+  window: hann
+  center: true
+
+# freq bins = n_fft // 2 + 1 = 257
+
+data:
+  clean_dir: ./data/clean_speech
+  noise_dir:  ./data/noise
+  mixed_dir:  ./data/noisy_mixed   # optional — used for validation only
+
+  # Train/Val/Test split (applied to clean + noise independently)
+  train_split: 0.80
+  val_split:   0.10
+  test_split:  0.10
+
+  # Dynamic mixing SNR range during training
+  snr_min: -5.0
+  snr_max: 20.0
+  double_noise_prob: 0.3           # probability of mixing 2 noise files instead of 1
+
+  num_workers: 4
+  pin_memory: true
+
+model:
+  in_bins: 257                   # n_fft // 2 + 1
+  channels: [192, 384, 384, 192]   # conv layer channel progression
+  kernel_size: 3
+  dropout: 0.05
+
+training:
+  batch_size: 64
+  epochs: 250
+  learning_rate: 0.0001
+  lr_scheduler: cosine           # cosine | plateau
+  lr_min: 0.000001
+  weight_decay: 0.0001
+  grad_clip: 5.0
+
+  # Loss weights
+  loss_mse_weight:   0.5
+  loss_sisnr_weight: 0.5
+
+  # Early stopping
+  patience: 40
+  monitor: val_si_snr            # metric to watch
+
+  # Checkpointing
+  checkpoint_dir: ./checkpoints
+  save_every_n_epochs: 10 
+
+logging:
+  log_dir: ./logs
+  log_interval: 10               # log every N batches
+  n_audio_samples: 4             # enhanced samples to log per val epoch
+
+evaluation:
+  results_dir: ./results
+  metrics: [si_snr, pesq, stoi]
